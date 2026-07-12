@@ -1,0 +1,104 @@
+# DSP-Cage
+
+DSP-Cage is a Python-based computational tool for calculating and visualizing the cavity volume of supramolecular cages using a dynamic probe-splitting strategy.
+
+## Installation and Usage
+
+1. Ensure that Python is installed on your system.
+
+   Python 3.9 or later is recommended.
+
+2. Install the required Python packages.
+
+```bash
+# Skip packages that are already installed in your Python environment.
+pip install numpy
+pip install scipy
+pip install pymeshlab
+pip install biopython
+pip install streamlit
+```
+
+Alternatively, install all dependencies with one command:
+
+```bash
+pip install numpy scipy pymeshlab biopython streamlit
+```
+
+3. Place the supramolecular cage structure file in the `datas` folder.
+
+4. Open `Main_Process.py` and modify the `filename` parameter so that it matches the name of the cage structure file.
+
+```python
+filename = "datas/your_cage_file.pdb"
+```
+
+5. Run the main program.
+
+```bash
+python Main_Process.py
+```
+
+## Run the Web Interface
+
+DSP-Cage also provides a Streamlit-based visual interface.
+
+Run the following command in a terminal:
+
+```bash
+streamlit run D:\daima\DSP_Cage\Visual_APP_En.py
+```
+
+> **Important:** `D:\daima\DSP_Cage\Visual_APP_En.py` is only an example path.  
+> Replace it with the actual path of `Visual_APP_En.py` on your own computer.
+
+For example:
+
+```bash
+streamlit run "C:\Users\YourName\Documents\DSP_Cage\Visual_APP_En2.py"
+```
+
+You can also first enter the DSP-Cage project directory and then run:
+
+```bash
+cd D:\daima\DSP_Cage
+streamlit run Visual_APP_En.py
+```
+
+Again, replace `D:\daima\DSP_Cage` with the actual DSP-Cage project path on your own computer.
+
+After the command is executed successfully, Streamlit will normally open the DSP-Cage interface automatically in your default web browser.
+
+## Notes
+
+- Make sure the input file path and file name are correct.
+- Run the command from the root directory of the DSP-Cage project.
+- The calculation results and visualization files will be generated according to the output settings defined in `Main_Process.py`.
+- If the `streamlit` command is not recognized, install Streamlit with:
+
+```bash
+pip install streamlit
+```
+
+- On some systems, the interface can also be started with:
+
+```bash
+python -m streamlit run Visual_APP_En.py
+```
+
+## Project Structure
+
+```text
+DSP-Cage/
+├── Main_Process.py
+├── Cavity_Calculation.py
+├── Balloon.py
+├── Visual_APP_En.py
+├── datas/
+│   └── your_cage_file.pdb
+└── README.md
+```
+
+## License
+
+Please refer to the repository license for details.
