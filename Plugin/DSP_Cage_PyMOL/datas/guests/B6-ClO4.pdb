@@ -1,0 +1,17 @@
+HEADER    CSD ENTRY shelx; Picture 1
+CRYST1   1.0000   1.0000   1.0000  90.00  90.00  90.00          
+SCALE1      1.000000  0.000000  0.000000       0.000000
+SCALE2      0.000000  1.000000  0.000000       0.000000
+SCALE3      0.000000  0.000000  1.000000       0.000000
+HETATM    1 Cl   UNK     1       1.679   4.209   4.142  1.00  0.00          CL  
+HETATM    2  O   UNK     1       0.458   3.737   4.569  1.00  0.00           O  
+HETATM    3  O   UNK     1       2.625   3.954   5.234  1.00  0.00           O  
+HETATM    4  O   UNK     1       1.557   5.662   4.192  1.00  0.00           O  
+HETATM    5  O   UNK     1       2.184   3.825   2.997  1.00  0.00           O  
+CONECT    1    2    3    4    5
+CONECT    2    1
+CONECT    3    1
+CONECT    4    1
+CONECT    5    1
+MASTER        0    0    0    0    0    0    0    3    5    0    5    0
+END
