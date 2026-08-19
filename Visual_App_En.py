@@ -99,7 +99,7 @@ with st.sidebar:
         ])
         files_to_process = st.multiselect("Select PDB files for calculation", pdb_list)
     else:
-        traj_list = [f for f in raw_files if not f.endswith(('.pdb', '.mol2', '.png', '.obj'))]
+        traj_list = [f for f in raw_files if not f.endswith(('.pdb', '.mol2', '.txt', '.PDB'))]
         selected_traj = st.selectbox("Select Trajectory File (HISTORY/XTC)", traj_list)
         if selected_traj:
             files_to_process = [selected_traj]
@@ -199,55 +199,69 @@ with st.sidebar:
                     frame_end_time = time.time()
                     frame_cost = frame_end_time - frame_start_time
 
+                    # Read the original cage and the calculated cavity model once,
+                    # then persist both strings in session_state for linked 3D rendering.
+                    full_pdb_path = os.path.join(data_dir, f_name)
+                    stem = pathlib.Path(f_name).stem
+                    cavity_pdb_path = os.path.join(output_dir, f"{stem}_cavity.pdb")
+
+                    with open(full_pdb_path, "r", encoding="utf-8", errors="ignore") as cage_file:
+                        cage_pdb_data = cage_file.read()
+
+                    cavity_pdb_data = None
+                    if os.path.exists(cavity_pdb_path):
+                        with open(cavity_pdb_path, "r", encoding="utf-8", errors="ignore") as cavity_file:
+                            cavity_pdb_data = cavity_file.read()
+                    else:
+                        st.warning(
+                            f"⚠️ Cavity visualization file is missing for {f_name}: {cavity_pdb_path}"
+                        )
+
                     try:
                         if v_list and v_list[0] > 10000:
                             st.warning(
                                 f"⚠️ Volume of {f_name} is too large, skipping MHP/ESP grid calculation automatically.")
+                        elif cavity_pdb_data is None:
+                            st.warning(
+                                f"⚠️ {f_name} is missing the cavity file, cannot calculate MHP/ESP: {cavity_pdb_path}"
+                            )
                         else:
-                            full_pdb_path = os.path.join(data_dir, f_name)
-                            stem = pathlib.Path(f_name).stem
+                            probe_path = cavity_pdb_path
+                            try:
+                                metal, metal_charge = detect_main_metal_charge(full_pdb_path)
+                                esp_result = calculate_esp_for_files(
+                                    full_pdb_path,
+                                    probe_path,
+                                    method="eem",
+                                    metal_name=metal,
+                                    metal_charge=metal_charge,
+                                )
+                                esp_values = np.asarray(esp_result["esp"], dtype=float)
+                                mean_abs_esp = float(np.mean(esp_values))
+                                max_esp = float(np.max(esp_values))
+                                min_esp = float(np.min(esp_values))
+                            except Exception as esp_e:
+                                st.warning(f"⚠️ ESP calculation failed for {f_name}: {esp_e}")
 
-                            probe_path = os.path.join(output_dir, f"{stem}_cavity.pdb")
+                            try:
+                                mhp_result = calculate_mhp_for_files(
+                                    full_pdb_path,
+                                    probe_path,
+                                    method="Ghose",
+                                    distance_function="Fauchere",
+                                )
+                                mhp_values = np.asarray(mhp_result["mhp"], dtype=float)
+                                average_cavity_hydrophobicity = float(np.mean(mhp_values))
+                                max_mhp = float(np.max(mhp_values))
+                                min_mhp = float(np.min(mhp_values))
 
-                            if not os.path.exists(probe_path):
+                                mlp_pos = mhp_values[mhp_values > 0]
+                                mlp_neg = mhp_values[mhp_values < 0]
+                                denom = float(np.sum(mlp_pos) - np.sum(mlp_neg))
+                                hydrophobic_index = float(np.sum(mlp_pos) / denom) if denom != 0 else 0
+                            except Exception as mhp_e:
                                 st.warning(
-                                    f"⚠️ {f_name} is missing the cavity file, cannot calculate MHP/ESP: {probe_path}")
-                            else:
-                                try:
-                                    metal, metal_charge = detect_main_metal_charge(full_pdb_path)
-                                    esp_result = calculate_esp_for_files(
-                                        full_pdb_path,
-                                        probe_path,
-                                        method="eem",
-                                        metal_name=metal,
-                                        metal_charge=metal_charge,
-                                    )
-                                    esp_values = np.asarray(esp_result["esp"], dtype=float)
-                                    mean_abs_esp = float(np.mean(esp_values))
-                                    max_esp = float(np.max(esp_values))
-                                    min_esp = float(np.min(esp_values))
-                                except Exception as esp_e:
-                                    st.warning(f"⚠️ ESP calculation failed for {f_name}: {esp_e}")
-
-                                try:
-                                    mhp_result = calculate_mhp_for_files(
-                                        full_pdb_path,
-                                        probe_path,
-                                        method="Ghose",
-                                        distance_function="Fauchere",
-                                    )
-                                    mhp_values = np.asarray(mhp_result["mhp"], dtype=float)
-                                    average_cavity_hydrophobicity = float(np.mean(mhp_values))
-                                    max_mhp = float(np.max(mhp_values))
-                                    min_mhp = float(np.min(mhp_values))
-
-                                    mlp_pos = mhp_values[mhp_values > 0]
-                                    mlp_neg = mhp_values[mhp_values < 0]
-                                    denom = float(np.sum(mlp_pos) - np.sum(mlp_neg))
-                                    hydrophobic_index = float(np.sum(mlp_pos) / denom) if denom != 0 else 0
-                                except Exception as mhp_e:
-                                    st.warning(
-                                        f"⚠️ MHP calculation failed for {f_name}, ESP results retained: {mhp_e}")
+                                    f"⚠️ MHP calculation failed for {f_name}, ESP results retained: {mhp_e}")
                     except Exception as chem_e:
                         st.warning(f"⚠️ Physicochemical property analysis failed for {f_name}: {chem_e}")
 
@@ -263,7 +277,10 @@ with st.sidebar:
                             'cost_time': frame_cost,
                             'win_info': st.session_state.cav.last_window_info,
                             'rebek': st.session_state.cav.cached_rebek_vol,
-                            'pdb_data': open(os.path.join(data_dir, f_name), 'r').read(),
+                            'pdb_data': cage_pdb_data,
+                            'input_format': pathlib.Path(f_name).suffix.lower().lstrip('.') or 'pdb',
+                            'cavity_pdb_data': cavity_pdb_data,
+                            'cavity_pdb_path': cavity_pdb_path,
                             'mhp': average_cavity_hydrophobicity,
                             'max_mhp': max_mhp,
                             'min_mhp': min_mhp,
@@ -432,35 +449,117 @@ if st.session_state.selected_detail_file:
         with main_left:
             st.subheader(f"🌐 3D Model Render Observation: {f_name}")
 
-            viz_mode = st.radio("Select Analysis Dimension",
-                                ["ESP (Electrostatic Potential)", "MHP (Hydrophobicity)"], horizontal=True)
+            viz_mode = st.radio(
+                "Select Analysis Dimension",
+                ["ESP (Electrostatic Potential)", "MHP (Hydrophobicity)"],
+                horizontal=True,
+                key=f"property_dimension_{f_name}",
+            )
             prop_key = "ESP" if "ESP" in viz_mode else "MHP"
             current_prop_val = val_esp if prop_key == "ESP" else val_mhp
             is_prop_available = current_prop_val is not None
 
-            view = py3Dmol.view(width='100%', height=400)
-            view.addModel(res['pdb_data'], 'pdb')
-            view.setStyle({'stick': {'colorscheme': 'greenCarbon'}, 'sphere': {'scale': 0.3}})
+            # Fixed 3D display defaults: show the cage together with the calculated
+            # cavity, represented by a surface plus probe points at full opacity.
+            # The corresponding UI controls are intentionally hidden.
+            display_mode = "Cage + Cavity"
+            cavity_style = "Surface + Probe Points"
+            cavity_opacity = 1.00
 
+            show_cage = display_mode in ("Cage + Cavity", "Cage Only")
+            show_cavity = display_mode in ("Cage + Cavity", "Cavity Only")
+            cavity_pdb_data = res.get("cavity_pdb_data")
+            cage_format = res.get("input_format", "pdb")
+
+            # If a requested cavity file is unexpectedly absent, fall back to the
+            # cage instead of leaving an empty 3D viewport.
+            render_cage = show_cage or (show_cavity and not cavity_pdb_data)
+
+            # The cavity color follows the sign of the selected average property.
+            # A neutral amber color is used when ESP/MHP is unavailable.
             if is_prop_available:
-                surf_color = '#ff4d4d' if current_prop_val > 0 else '#4d4dff'
-                view.addSurface(py3Dmol.VDW, {'opacity': 0.6, 'color': surf_color})
-                view.zoomTo()
-                showmol(view, height=400)
-
-                l_min, l_max, colors = ("Negative", "Positive", "blue, white, red") if prop_key == "ESP" else (
-                    "Hydrophilic", "Hydrophobic", "#3333ff, white, #ff3333")
-                st.markdown(f"""
-                            <div style="display: flex; align-items: center; justify-content: center; margin-top: -10px;">
-                                <span style="font-size: 0.8rem; width: 80px; text-align: right; margin-right: 15px;">{l_min}</span>
-                                <div style="width: 100%; max-width: 320px; height: 12px; background: linear-gradient(to right, {colors}); border-radius: 10px; border: 1px solid #ddd;"></div>
-                                <span style="font-size: 0.8rem; width: 80px; margin-left: 15px;">{l_max}</span>
-                            </div>
-                        """, unsafe_allow_html=True)
+                cavity_color = "#ff4d4d" if current_prop_val > 0 else "#4d4dff"
             else:
-                view.zoomTo()
-                showmol(view, height=400)
-                st.warning(f"⚠️ Property {prop_key} not calculated, cannot display mesh surface.")
+                cavity_color = "#f4b942"
+
+            view = py3Dmol.view(width="100%", height=460)
+            view.setBackgroundColor("white")
+            next_model_index = 0
+
+            if render_cage:
+                view.addModel(res["pdb_data"], cage_format)
+                cage_model_index = next_model_index
+                next_model_index += 1
+                view.setStyle(
+                    {"model": cage_model_index},
+                    {
+                        "stick": {"colorscheme": "greenCarbon", "radius": 0.13},
+                        "sphere": {"colorscheme": "greenCarbon", "scale": 0.24},
+                    },
+                )
+
+            if show_cavity and cavity_pdb_data:
+                view.addModel(cavity_pdb_data, "pdb")
+                cavity_model_index = next_model_index
+
+                if cavity_style in ("Surface + Probe Points", "Probe Points"):
+                    view.setStyle(
+                        {"model": cavity_model_index},
+                        {
+                            "sphere": {
+                                "color": cavity_color,
+                                "scale": 0.34,
+                                "opacity": cavity_opacity,
+                            },
+                            "stick": {
+                                "color": cavity_color,
+                                "radius": 0.07,
+                                "opacity": cavity_opacity,
+                            },
+                        },
+                    )
+                else:
+                    # Hide probe atoms while retaining them as the source of the surface.
+                    view.setStyle({"model": cavity_model_index}, {})
+
+                if cavity_style in ("Surface + Probe Points", "Semi-transparent Surface"):
+                    view.addSurface(
+                        py3Dmol.VDW,
+                        {
+                            "opacity": cavity_opacity,
+                            "color": cavity_color,
+                        },
+                        {"model": cavity_model_index},
+                    )
+            elif show_cavity:
+                st.warning(
+                    "⚠️ The calculated cavity PDB was not found. Only the original cage can be displayed."
+                )
+
+            view.zoomTo()
+            showmol(view, height=460)
+
+            if show_cavity and cavity_pdb_data:
+                l_min, l_max, colors = (
+                    ("Negative", "Positive", "blue, white, red")
+                    if prop_key == "ESP"
+                    else ("Hydrophilic", "Hydrophobic", "#3333ff, white, #ff3333")
+                )
+                st.markdown(
+                    f"""
+                    <div style="display: flex; align-items: center; justify-content: center; margin-top: -10px;">
+                        <span style="font-size: 0.8rem; width: 80px; text-align: right; margin-right: 15px;">{l_min}</span>
+                        <div style="width: 100%; max-width: 320px; height: 12px; background: linear-gradient(to right, {colors}); border-radius: 10px; border: 1px solid #ddd;"></div>
+                        <span style="font-size: 0.8rem; width: 80px; margin-left: 15px;">{l_max}</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+
+            if not is_prop_available:
+                st.warning(
+                    f"⚠️ Property {prop_key} was not calculated; the cavity is displayed in neutral amber."
+                )
 
             st.write("")
             st.divider()
