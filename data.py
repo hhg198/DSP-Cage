@@ -1,4 +1,14 @@
 # Van der Waals radii in Å taken from http://www.webelements.com/periodicity/van_der_waals_radius/
+"""
+Atomic parameters from:
+
+CageCavityCalc
+Vicente Marti-Centelles
+
+Copyright (c) 2021 VicenteMartiCentelles
+
+MIT License.
+"""
 
 vdw_radii = {'H': 1.2, 'HE': 1.4, 'LI': 1.82, 'BE': 1.53, 'B': 1.92, 'C': 1.7, 'N': 1.55, 'O': 1.52,
              'F': 1.47, 'NE': 1.54, 'NA': 2.27, 'MG': 1.73, 'AL': 1.84, 'SI': 2.1, 'P': 1.8, 'S': 1.8,

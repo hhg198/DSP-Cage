@@ -1,3 +1,21 @@
+"""
+DSP-Cage
+
+This file contains modified components adapted from:
+
+CageCavityCalc
+Vicente Marti-Centelles
+
+Copyright (c) 2021 VicenteMartiCentelles
+
+Licensed under the MIT License.
+
+See LICENSE_C3 for details.
+
+The present implementation additionally includes
+new Dynamic Splitting of Probes algorithms.
+"""
+
 import numpy as np
 import math
 import os
