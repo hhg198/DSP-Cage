@@ -99,6 +99,59 @@ DSP-Cage/
 └── README.md
 ```
 
+# Acknowledgement and Third-Party Components
+
+DSP-Cage is an independent framework developed for supramolecular cage cavity
+characterization based on the Dynamic Splitting of Probes (DSP) strategy.
+
+The core methodology of DSP-Cage, including:
+
+- Dynamic Splitting of Probes strategy;
+- adaptive probe sampling mechanism;
+- dynamic cavity exploration;
+- cavity reconstruction workflow;
+- GUI-oriented visualization and interaction modules;
+
+was independently developed in this work.
+
+---
+
+## Relation to CageCavityCalc (C3)
+
+DSP-Cage incorporates several low-level computational components and scientific
+parameters from the open-source CageCavityCalc (C3) framework developed by:
+
+**Vicente Marti-Centelles**
+
+Repository:
+
+https://github.com/VicenteMartiCentelles/CageCavityCalc
+
+
+The original CageCavityCalc software is distributed under the MIT License.
+The original copyright notice and license information have been retained.
+
+Please refer to:
+
+LICENSE_C3
+and
+THIRD_PARTY_LICENSES.md
+
+
+Users should also cite the original CageCavityCalc work:
+CageCavityCalc
+Vicente Marti-Centelles et al.
+DOI: 10.1021/acs.jcim.4c00355
+
+
+---
+
 ## License
 
-Please refer to the repository license for details.
+DSP-Cage is released for academic research and non-commercial use.
+
+Third-party components derived from CageCavityCalc remain under their
+original MIT License.
+
+Commercial use of DSP-Cage requires permission from the authors.
+
